@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Hungry Crow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            background: #87CEEB;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 100%);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: filter 0.1s;
+        }
+
+        .hit-flash {
+            filter: brightness(2) contrast(1.5);
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .score-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .score {
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        .combo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .combo.active {
+            opacity: 1;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .game-over p {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .game-over button {
+            font-size: 24px;
+            padding: 15px 40px;
+            margin-top: 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .game-over button:active {
+            background: #45a049;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            pointer-events: auto;
+        }
+
+        .start-screen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+
+        .start-screen p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .start-screen input {
+            font-size: 20px;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: none;
+            width: 200px;
+            text-align: center;
+        }
+
+        .start-screen button {
+            font-size: 28px;
+            padding: 20px 50px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            touch-action: manipulation;
+            display: block;
+            margin: 10px auto;
+        }
+
+        .start-screen button:active {
+            background: #45a049;
+        }
+
+        .start-screen .secondary-button {
+            font-size: 20px;
+            padding: 10px 30px;
+            background: #2196F3;
+        }
+
+        .upgrade-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            display: none;
+            pointer-events: auto;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .upgrade-screen h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+
+        .upgrade-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .upgrade-item button {
+            padding: 8px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .upgrade-item button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .colorblind-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            pointer-events: auto;
+        }
+
+        .audio-toggle {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            pointer-events: auto;
+        }
+    </style>
+    <script>
+        // Define functions before HTML uses them
+        function startGame() {} // Placeholder
+        function showUpgrades() {} // Placeholder
+        function toggleColorblind() {} // Placeholder
+        function toggleAudio() {} // Placeholder
+        function closeUpgrades() {} // Placeholder
+        function resetGame() {} // Placeholder
+    </script>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="ui-overlay">
+        <div class="score-container">
+            <div class="score" id="score">0</div>
+            <div class="combo" id="combo">Combo x1</div>
+        </div>
+        <div class="colorblind-toggle" onclick="toggleColorblind()">CB: OFF</div>
+        <div class="audio-toggle" onclick="toggleAudio()">🔊</div>
+    </div>
+    <div class="start-screen" id="startScreen">
+        <h1>🐦 Hungry Crow</h1>
+        <p>Tap or hold to fly up<br>Release to fly down<br><br>Catch 🥜 peanuts!<br>Avoid 🚗 cars and 🐦 blue jays!</p>
+        <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+        <button onclick="startGame()">START</button>
+        <button onclick="showUpgrades()" class="secondary-button">NEST UPGRADES</button>
+    </div>
+    <div class="game-over" id="gameOver">
+        <h2>Game Over!</h2>
+        <p>Score: <span id="finalScore">0</span></p>
+        <p>Best: <span id="highScore">0</span></p>
+        <button onclick="showUpgrades()">NEST UPGRADES</button>
+        <button onclick="resetGame()">PLAY AGAIN</button>
+    </div>
+    <div class="upgrade-screen" id="upgradeScreen">
+        <h2>🪺 Nest Upgrades</h2>
+        <div id="upgradesList"></div>
+        <p>Points: <span id="upgradePoints">0</span></p>
+        <button onclick="closeUpgrades()">BACK</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const comboElement = document.getElementById('combo');
+        const gameOverElement = document.getElementById('gameOver');
+        const startScreenElement = document.getElementById('startScreen');
+        const upgradeScreenElement = document.getElementById('upgradeScreen');
+        const finalScoreElement = document.getElementById('finalScore');
+        const highScoreElement = document.getElementById('highScore');
+        const playerNameInput = document.getElementById('playerName');
+
+        // Game state
+        let gameStarted = false;
+        let gameRunning = false;
+        let score = 0;
+        let highScore = localStorage.getItem('hungryCrowHighScore') || 0;
+        let totalPoints = parseInt(localStorage.getItem('hungryCrowTotalPoints') || 0);
+        let playerName = localStorage.getItem('hungryCrowPlayerName') || '';
+        let isPressed = false;
+        let colorblindMode = false;
+        let audioEnabled = true;
+
+        // Combo system
+        let combo = 1;
+        let lastPeanutTime = 0;
+        const comboTimeout = 1500;
+
+        // Day-night cycle
+        let timeOfDay = 0;
+        const dayNightDuration = 40000; // 40 seconds
+
+        // Screen shake
+        let shakeAmount = 0;
+        let shakeDecay = 0.9;
+
+        // Upgrades
+        const upgrades = {
+            flapPower: {
+                name: "Stronger Wings",
+                cost: 100,
+                level: parseInt(localStorage.getItem('upgrade_flapPower') || 0),
+                maxLevel: 5,
+                description: "Increase flap power by 0.5"
+            },
+            crowColor: {
+                name: "Crow Colors",
+                cost: 50,
+                level: parseInt(localStorage.getItem('upgrade_crowColor') || 0),
+                maxLevel: 4,
+                description: "Unlock new crow colors"
+            }
+        };
+
+        // Audio context and sounds
+        let audioContext;
+        let sounds = {};
+
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create flap sound
+            sounds.flap = createTone(200, 0.1, 'sine');
+            sounds.chirp = createTone(800, 0.2, 'sine');
+            sounds.honk = createTone(150, 0.3, 'sawtooth');
+        }
+
+        function createTone(frequency, duration, type) {
+            return function() {
+                if (!audioEnabled || !audioContext) return;
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = type;
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            };
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            document.querySelector('.audio-toggle').textContent = audioEnabled ? '🔊' : '🔇';
+        }
+
+        function toggleColorblind() {
+            colorblindMode = !colorblindMode;
+            document.querySelector('.colorblind-toggle').textContent = `CB: ${colorblindMode ? 'ON' : 'OFF'}`;
+        }
+
+        // Set canvas size
+        function resizeCanvas() {
+            const maxWidth = 400;
+            const maxHeight = 600;
+            const aspectRatio = maxWidth / maxHeight;
+            
+            let width = window.innerWidth;
+            let height = window.innerHeight;
+            
+            if (width / height > aspectRatio) {
+                width = height * aspectRatio;
+            } else {
+                height = width / aspectRatio;
+            }
+            
+            width = Math.min(width, maxWidth);
+            height = Math.min(height, maxHeight);
+            
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initialize player name
+        playerNameInput.value = playerName;
+
+        // Particles
+        const particles = [];
+        const floatingTexts = [];
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.radius = 2 + Math.random() * 2;
+                this.color = color;
+                this.alpha = 1;
+                this.decay = 0.02;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color = '#FFD700') {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.alpha = 1;
+                this.vy = -1;
+                this.lifetime = 600;
+                this.age = 0;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.age += 16;
+                this.alpha = 1 - (this.age / this.lifetime);
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        // Game objects
+        class Crow {
+            constructor() {
+                this.x = canvas.width * 0.2;
+                this.y = canvas.height / 2;
+                this.vy = 0;
+                this.size = 30;
+                this.gravity = 0.5;
+                this.baseFlapPower = -8;
+                this.flapPower = this.baseFlapPower - (upgrades.flapPower.level * 0.5);
+                this.maxVelocity = 10;
+                this.angle = 0;
+                this.color = this.getColor();
+                this.hasRibbon = playerName.toLowerCase() === 'victoria';
+                
+                // Ghost outline
+                this.ghostX = this.x;
+                this.ghostY = this.y;
+                this.ghostAlpha = 0;
+            }
+
+            getColor() {
+                const colors = ['#1a1a1a', '#8B4513', '#4169E1', '#FF1493', '#32CD32'];
+                return colors[Math.min(upgrades.crowColor.level, colors.length - 1)];
+            }
+
+            update() {
+                if (isPressed) {
+                    this.vy += this.flapPower * 0.3;
+                    if (sounds.flap) sounds.flap();
+                }
+                
+                this.vy += this.gravity;
+                this.vy = Math.max(Math.min(this.vy, this.maxVelocity), -this.maxVelocity);
+                this.y += this.vy;
+                
+                // Keep within bounds
+                this.y = Math.max(this.size, Math.min(canvas.height - this.size, this.y));
+                
+                // Update angle based on velocity
+                this.angle = this.vy * 0.02;
+                
+                // Update ghost
+                if (this.ghostAlpha > 0) {
+                    this.ghostAlpha -= 0.016;
+                }
+            }
+
+            showGhost() {
+                this.ghostX = this.x;
+                this.ghostY = this.y;
+                this.ghostAlpha = 1;
+            }
+
+            draw() {
+                // Draw ghost
+                if (this.ghostAlpha > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = this.ghostAlpha * 0.3;
+                    ctx.translate(this.ghostX, this.ghostY);
+                    ctx.rotate(this.angle);
+                    ctx.strokeStyle = '#FF0000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size, this.size * 0.8, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                
+                // Draw crow
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // Body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size * 0.8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Wing
+                ctx.fillStyle = this.color === '#1a1a1a' ? '#2a2a2a' : this.color;
+                ctx.beginPath();
+                ctx.ellipse(-5, 0, this.size * 0.8, this.size * 0.6, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eye
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.3, -this.size * 0.2, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.35, -this.size * 0.2, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Beak
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.moveTo(this.size * 0.8, 0);
+                ctx.lineTo(this.size * 1.2, 0);
+                ctx.lineTo(this.size * 0.8, this.size * 0.2);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Easter egg ribbon
+                if (this.hasRibbon) {
+                    ctx.fillStyle = '#FF69B4';
+                    ctx.fillRect(-5, -this.size * 0.5, 10, 5);
+                    ctx.beginPath();
+                    ctx.moveTo(-5, -this.size * 0.5);
+                    ctx.lineTo(-8, -this.size * 0.7);
+                    ctx.lineTo(-2, -this.size * 0.6);
+                    ctx.lineTo(2, -this.size * 0.6);
+                    ctx.lineTo(8, -this.size * 0.7);
+                    ctx.lineTo(5, -this.size * 0.5);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        class Obstacle {
+            constructor(type, y) {
+                this.type = type;
+                this.x = canvas.width;
+                this.y = y;
+                this.baseSpeed = 3;
+                this.vx = -(this.baseSpeed + (Math.floor(score / 50) * 0.2));
+                
+                if (type === 'peanut') {
+                    this.size = 20;
+                    this.points = 10;
+                } else if (type === 'golden_peanut') {
+                    this.size = 25;
+                    this.points = 50;
+                } else if (type === 'car') {
+                    this.width = 60;
+                    this.height = 30;
+                } else if (type === 'bluejay') {
+                    this.size = 25;
+                    this.baseY = y;
+                    this.diveMode = false;
+                    this.diveTimer = 0;
+                }
+            }
+
+            update(crow) {
+                this.x += this.vx;
+                
+                if (this.type === 'bluejay') {
+                    // Check distance to crow for reactive dive
+                    const distance = Math.abs(this.x - crow.x);
+                    if (distance < 120 && !this.diveMode) {
+                        this.diveMode = true;
+                        this.diveTimer = 120; // 2 seconds at 60fps
+                    }
+                    
+                    if (this.diveTimer > 0) {
+                        this.diveTimer--;
+                        if (this.diveTimer === 0) {
+                            this.diveMode = false;
+                        }
+                    }
+                    
+                    const amplitude = this.diveMode ? 4 : 2;
+                    this.y = this.baseY + Math.sin(Date.now() * 0.003) * amplitude * 10;
+                }
+            }
+
+            draw() {
+                if (this.type === 'peanut') {
+                    // Draw peanut
+                    ctx.fillStyle = '#D2691E';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x, this.y, this.size * 0.8, this.size, 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Peanut texture
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x - 5, this.y, this.size * 0.3, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(this.x + 5, this.y, this.size * 0.3, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    if (colorblindMode) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('P', this.x, this.y + 4);
+                    }
+                } else if (this.type === 'golden_peanut') {
+                    // Draw golden peanut
+                    ctx.fillStyle = '#FFD700';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#FFD700';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x, this.y, this.size * 0.8, this.size, 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    
+                    // Sparkle effect
+                    ctx.fillStyle = 'white';
+                    const sparkleOffset = Math.sin(Date.now() * 0.005) * 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x + sparkleOffset, this.y - 5, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (colorblindMode) {
+                        ctx.fillStyle = 'black';
+                        ctx.font = 'bold 12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('G', this.x, this.y + 4);
+                    }
+                } else if (this.type === 'car') {
+                    // Draw car
+                    ctx.fillStyle = colorblindMode ? '#FF8C00' : '#FF4444';
+                    ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                    
+                    // Windows
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(this.x - this.width/2 + 10, this.y - this.height/2 + 5, 15, 10);
+                    ctx.fillRect(this.x + 5, this.y - this.height/2 + 5, 15, 10);
+                    
+                    // Wheels
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.arc(this.x - 15, this.y + this.height/2, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(this.x + 15, this.y + this.height/2, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (colorblindMode) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('C', this.x, this.y + 5);
+                    }
+                } else if (this.type === 'bluejay') {
+                    // Draw blue jay
+                    ctx.fillStyle = colorblindMode ? '#9370DB' : '#4169E1';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x, this.y, this.size, this.size * 0.8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Wing detail
+                    ctx.fillStyle = colorblindMode ? '#8A2BE2' : '#1E90FF';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x - 5, this.y, this.size * 0.8, this.size * 0.6, -0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Eye
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(this.x + 8, this.y - 5, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Beak
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 15, this.y);
+                    ctx.lineTo(this.x + 20, this.y);
+                    ctx.lineTo(this.x + 15, this.y + 3);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    if (colorblindMode) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('J', this.x, this.y + 4);
+                    }
+                    
+                    // Dive indicator
+                    if (this.diveMode) {
+                        ctx.strokeStyle = '#FF0000';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.size + 10, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+            }
+
+            checkCollision(crow) {
+                if (this.type === 'peanut' || this.type === 'golden_peanut') {
+                    const dist = Math.hypot(this.x - crow.x, this.y - crow.y);
+                    return dist < this.size + crow.size;
+                } else if (this.type === 'car') {
+                    return crow.x + crow.size > this.x - this.width/2 &&
+                           crow.x - crow.size < this.x + this.width/2 &&
+                           crow.y + crow.size > this.y - this.height/2 &&
+                           crow.y - crow.size < this.y + this.height/2;
+                } else if (this.type === 'bluejay') {
+                    const dist = Math.hypot(this.x - crow.x, this.y - crow.y);
+                    return dist < this.size + crow.size - 5;
+                }
+            }
+        }
+
+        // City skyline
+        const buildings = [];
+        for (let i = 0; i < 10; i++) {
+            buildings.push({
+                x: i * 80,
+                width: 40 + Math.random() * 40,
+                height: 50 + Math.random() * 100
+            });
+        }
+
+        // Game variables
+        const crow = new Crow();
+        const obstacles = [];
+        let obstacleTimer = 0;
+        let baseObstacleInterval = 60;
+        let obstacleInterval = baseObstacleInterval;
+        let difficultyLevel = 0;
+
+        // Clouds for background
+        const clouds = [];
+        const bgClouds = [];
+        
+        // Foreground clouds
+        for (let i = 0; i < 5; i++) {
+            clouds.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height * 0.5,
+                size: 30 + Math.random() * 40,
+                speed: 0.5 + Math.random() * 0.5
+            });
+        }
+        
+        // Background clouds
+        for (let i = 0; i < 3; i++) {
+            bgClouds.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height * 0.3,
+                size: 60 + Math.random() * 80,
+                speed: 0.25 + Math.random() * 0.25
+            });
+        }
+
+        // Input handling
+        function handleStart(e) {
+            e.preventDefault();
+            isPressed = true;
+        }
+
+        function handleEnd(e) {
+            e.preventDefault();
+            isPressed = false;
+        }
+
+        canvas.addEventListener('touchstart', handleStart);
+        canvas.addEventListener('touchend', handleEnd);
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('mouseleave', handleEnd);
+
+        // Prevent scrolling on touch
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+        // Initialize audio on first interaction
+        let audioInitialized = false;
+        function ensureAudio() {
+            if (!audioInitialized) {
+                initAudio();
+                audioInitialized = true;
+            }
+        }
+
+        function startGame() {
+            ensureAudio();
+            playerName = playerNameInput.value || 'Player';
+            localStorage.setItem('hungryCrowPlayerName', playerName);
+            crow.hasRibbon = playerName.toLowerCase() === 'victoria';
+            
+            startScreenElement.style.display = 'none';
+            gameStarted = true;
+            gameRunning = true;
+            score = 0;
+            combo = 1;
+            crow.y = canvas.height / 2;
+            crow.vy = 0;
+            crow.flapPower = crow.baseFlapPower - (upgrades.flapPower.level * 0.5);
+            crow.color = crow.getColor();
+            obstacles.length = 0;
+            particles.length = 0;
+            floatingTexts.length = 0;
+            obstacleInterval = baseObstacleInterval;
+            difficultyLevel = 0;
+        }
+
+        function resetGame() {
+            gameOverElement.style.display = 'none';
+            gameRunning = true;
+            score = 0;
+            combo = 1;
+            crow.y = canvas.height / 2;
+            crow.vy = 0;
+            crow.ghostAlpha = 0;
+            obstacles.length = 0;
+            particles.length = 0;
+            floatingTexts.length = 0;
+            obstacleInterval = baseObstacleInterval;
+            difficultyLevel = 0;
+            shakeAmount = 0;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            crow.showGhost();
+            finalScoreElement.textContent = score;
+            totalPoints += score;
+            localStorage.setItem('hungryCrowTotalPoints', totalPoints);
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('hungryCrowHighScore', highScore);
+            }
+            highScoreElement.textContent = highScore;
+            gameOverElement.style.display = 'block';
+            
+            // Screen flash
+            canvas.classList.add('hit-flash');
+            setTimeout(() => canvas.classList.remove('hit-flash'), 100);
+            
+            // Big shake
+            shakeAmount = 20;
+        }
+
+        function showUpgrades() {
+            upgradeScreenElement.style.display = 'block';
+            document.getElementById('upgradePoints').textContent = totalPoints;
+            updateUpgradesList();
+        }
+
+        function closeUpgrades() {
+            upgradeScreenElement.style.display = 'none';
+            if (!gameStarted) {
+                startScreenElement.style.display = 'block';
+            }
+        }
+
+        function updateUpgradesList() {
+            const list = document.getElementById('upgradesList');
+            list.innerHTML = '';
+            
+            for (const [key, upgrade] of Object.entries(upgrades)) {
+                const item = document.createElement('div');
+                item.className = 'upgrade-item';
+                
+                const info = document.createElement('div');
+                info.innerHTML = `<strong>${upgrade.name}</strong><br>${upgrade.description}<br>Level: ${upgrade.level}/${upgrade.maxLevel}`;
+                
+                const button = document.createElement('button');
+                if (upgrade.level >= upgrade.maxLevel) {
+                    button.textContent = 'MAX';
+                    button.disabled = true;
+                } else if (totalPoints >= upgrade.cost) {
+                    button.textContent = `Buy (${upgrade.cost}pts)`;
+                    button.onclick = () => buyUpgrade(key);
+                } else {
+                    button.textContent = `Need ${upgrade.cost}pts`;
+                    button.disabled = true;
+                }
+                
+                item.appendChild(info);
+                item.appendChild(button);
+                list.appendChild(item);
+            }
+        }
+
+        function buyUpgrade(key) {
+            const upgrade = upgrades[key];
+            if (totalPoints >= upgrade.cost && upgrade.level < upgrade.maxLevel) {
+                totalPoints -= upgrade.cost;
+                upgrade.level++;
+                localStorage.setItem(`upgrade_${key}`, upgrade.level);
+                localStorage.setItem('hungryCrowTotalPoints', totalPoints);
+                updateUpgradesList();
+                
+                // Apply upgrades
+                if (key === 'flapPower') {
+                    crow.flapPower = crow.baseFlapPower - (upgrade.level * 0.5);
+                } else if (key === 'crowColor') {
+                    crow.color = crow.getColor();
+                }
+            }
+        }
+
+        function createPeanutParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push(new Particle(x, y, '#D2691E'));
+            }
+        }
+
+        function updateCombo() {
+            const now = Date.now();
+            if (now - lastPeanutTime < comboTimeout) {
+                combo++;
+            } else {
+                combo = 1;
+            }
+            lastPeanutTime = now;
+            
+            if (combo > 1) {
+                comboElement.textContent = `Combo x${combo}`;
+                comboElement.classList.add('active');
+            } else {
+                comboElement.classList.remove('active');
+            }
+        }
+
+        function getDayNightColors() {
+            const progress = (Date.now() % dayNightDuration) / dayNightDuration;
+            
+            // Dawn -> Noon -> Sunset -> Night
+            let topColor, bottomColor, cloudAlpha;
+            
+            if (progress < 0.25) { // Dawn
+                const t = progress / 0.25;
+                topColor = lerpColor('#2C3E50', '#87CEEB', t);
+                bottomColor = lerpColor('#E74C3C', '#98D8E8', t);
+                cloudAlpha = 0.3 + t * 0.5;
+            } else if (progress < 0.5) { // Noon
+                topColor = '#87CEEB';
+                bottomColor = '#98D8E8';
+                cloudAlpha = 0.8;
+            } else if (progress < 0.75) { // Sunset
+                const t = (progress - 0.5) / 0.25;
+                topColor = lerpColor('#87CEEB', '#FF6B6B', t);
+                bottomColor = lerpColor('#98D8E8', '#FFD93D', t);
+                cloudAlpha = 0.8 - t * 0.3;
+            } else { // Night
+                const t = (progress - 0.75) / 0.25;
+                topColor = lerpColor('#FF6B6B', '#2C3E50', t);
+                bottomColor = lerpColor('#FFD93D', '#34495E', t);
+                cloudAlpha = 0.5 - t * 0.2;
+            }
+            
+            return { topColor, bottomColor, cloudAlpha };
+        }
+
+        function lerpColor(color1, color2, t) {
+            const c1 = hexToRgb(color1);
+            const c2 = hexToRgb(color2);
+            
+            const r = Math.floor(c1.r + (c2.r - c1.r) * t);
+            const g = Math.floor(c1.g + (c2.g - c1.g) * t);
+            const b = Math.floor(c1.b + (c2.b - c1.b) * t);
+            
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            // Update crow
+            crow.update();
+
+            // Update screen shake
+            if (shakeAmount > 0) {
+                shakeAmount *= shakeDecay;
+                if (shakeAmount < 0.1) shakeAmount = 0;
+            }
+
+            // Update clouds
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x + cloud.size < 0) {
+                    cloud.x = canvas.width + cloud.size;
+                    cloud.y = Math.random() * canvas.height * 0.5;
+                }
+            });
+            
+            bgClouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x + cloud.size < 0) {
+                    cloud.x = canvas.width + cloud.size;
+                    cloud.y = Math.random() * canvas.height * 0.3;
+                }
+            });
+
+            // Update buildings
+            buildings.forEach(building => {
+                building.x -= 0.75;
+                if (building.x + building.width < 0) {
+                    building.x = canvas.width;
+                }
+            });
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                particle.update();
+                if (particle.alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Update floating texts
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const text = floatingTexts[i];
+                text.update();
+                if (text.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                }
+            }
+
+            // Dynamic difficulty
+            const newDifficultyLevel = Math.floor(score / 50);
+            if (newDifficultyLevel > difficultyLevel) {
+                difficultyLevel = newDifficultyLevel;
+                obstacleInterval = Math.max(30, baseObstacleInterval - difficultyLevel * 2);
+            }
+
+            // Generate obstacles
+            obstacleTimer++;
+            if (obstacleTimer >= obstacleInterval) {
+                obstacleTimer = 0;
+                
+                const rand = Math.random();
+                let type, y;
+                
+                if (rand < 0.05) { // 5% golden peanut
+                    type = 'golden_peanut';
+                    y = 50 + Math.random() * (canvas.height - 100);
+                } else if (rand < 0.5) {
+                    type = 'peanut';
+                    y = 50 + Math.random() * (canvas.height - 100);
+                } else if (rand < 0.75) {
+                    type = 'car';
+                    y = canvas.height - 40;
+                } else {
+                    type = 'bluejay';
+                    y = 50 + Math.random() * (canvas.height - 200);
+                }
+                
+                obstacles.push(new Obstacle(type, y));
+            }
+
+            // Update obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obstacle = obstacles[i];
+                obstacle.update(crow);
+
+                // Remove off-screen obstacles
+                if (obstacle.x < -100) {
+                    obstacles.splice(i, 1);
+                    continue;
+                }
+
+                // Check collision
+                if (obstacle.checkCollision(crow)) {
+                    if (obstacle.type === 'peanut' || obstacle.type === 'golden_peanut') {
+                        updateCombo();
+                        const points = obstacle.points * combo;
+                        score += points;
+                        scoreElement.textContent = score;
+                        
+                        createPeanutParticles(obstacle.x, obstacle.y);
+                        floatingTexts.push(new FloatingText(obstacle.x, obstacle.y, `+${points}`));
+                        
+                        if (sounds.chirp) sounds.chirp();
+                        
+                        obstacles.splice(i, 1);
+                        
+                        // Golden peanut spawns jay
+                        if (obstacle.type === 'golden_peanut') {
+                            obstacles.push(new Obstacle('bluejay', 50 + Math.random() * (canvas.height - 200)));
+                        }
+                    } else {
+                        if (obstacle.type === 'car' && sounds.honk) sounds.honk();
+                        gameOver();
+                    }
+                }
+            }
+
+            // Check boundaries
+            if (crow.y - crow.size <= 0 || crow.y + crow.size >= canvas.height) {
+                gameOver();
+            }
+
+            // Update combo timeout
+            if (Date.now() - lastPeanutTime > comboTimeout && combo > 1) {
+                combo = 1;
+                comboElement.classList.remove('active');
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Apply screen shake
+            ctx.save();
+            if (shakeAmount > 0) {
+                const shakeX = (Math.random() - 0.5) * shakeAmount;
+                const shakeY = (Math.random() - 0.5) * shakeAmount;
+                ctx.translate(shakeX, shakeY);
+            }
+
+            // Day-night cycle
+            const { topColor, bottomColor, cloudAlpha } = getDayNightColors();
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, topColor);
+            gradient.addColorStop(1, bottomColor);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background clouds
+            ctx.fillStyle = `rgba(255, 255, 255, ${cloudAlpha * 0.4})`;
+            bgClouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.arc(cloud.x - cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw city skyline
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            buildings.forEach(building => {
+                ctx.fillRect(building.x, canvas.height - building.height - 20, building.width, building.height);
+            });
+
+            // Draw foreground clouds
+            ctx.fillStyle = `rgba(255, 255, 255, ${cloudAlpha})`;
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.arc(cloud.x - cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw ground
+            ctx.fillStyle = '#8B7355';
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+            if (gameStarted) {
+                // Draw obstacles
+                obstacles.forEach(obstacle => obstacle.draw());
+
+                // Draw crow
+                crow.draw();
+
+                // Draw particles
+                particles.forEach(particle => particle.draw());
+
+                // Draw floating texts
+                floatingTexts.forEach(text => text.draw());
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Make functions globally accessible
+        window.startGame = startGame;
+        window.resetGame = resetGame;
+        window.showUpgrades = showUpgrades;
+        window.closeUpgrades = closeUpgrades;
+        window.toggleColorblind = toggleColorblind;
+        window.toggleAudio = toggleAudio;
+
+        // Start game loop
+        gameLoop();
+    </script>
+</body>
+</html>
